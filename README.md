@@ -146,3 +146,7 @@ and style guidelines with every build.
 To resolve any errors, you must run **spotlessApply** task.
 `./gradlew spotlessApply`
 
+### Solution to Coding Challenge
+
+Soluion to this coding challenge is available in /api
+Please, refer **/api/README.md** for details on how to run the api

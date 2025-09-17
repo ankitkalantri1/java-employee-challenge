@@ -8,13 +8,15 @@ Start **Server** Spring Boot application
 `./gradlew server:bootRun`
 
 ### Getting Started with API server invocation
-Start **Server** Spring Boot application
+Start **API** Spring Boot application
 
 1. Build the api using below command:
 `./gradlew api:build`
 
 2. Run the api using below command:
 `./gradlew api:bootRun`
+
+Thia will start the api server on localhost on port 8111.
 
 ### Endpoints
 The details about endpoints are available at - http://localhost:8111/swagger-ui/index.html
