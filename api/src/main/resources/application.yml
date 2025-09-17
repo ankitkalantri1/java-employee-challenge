@@ -1,0 +1,34 @@
+spring.application.name: employee-api
+server.port: 8111
+hystrix:
+  enabled: true
+resilience4j.retry:
+  instances:
+    employeeService:
+      max-attempts: 3
+      wait-duration: 1s
+      retry-exceptions:
+        - com.reliaquest.api.exception.RetryableFeignException
+        - feign.RetryableException
+      ignore-exceptions:
+        - com.reliaquest.api.exception.NonRetryableFeignException
+resilience4j:
+  circuitbreaker:
+    instances:
+      employeeService:
+        sliding-window-size: 10
+        permitted-number-of-calls-in-half-open-state: 2
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 20s
+        ignore-exceptions:
+          - com.reliaquest.api.exception.NonRetryableFeignException
+logging:
+  level:
+    root: INFO
+    com.reliaquest: INFO
+employee:
+  service:
+    baseUrl: http://localhost:8112/api/v1/employee
+springdoc:
+  swagger-ui:
+    url: /swagger.yml
