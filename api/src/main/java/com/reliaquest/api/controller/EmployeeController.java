@@ -8,7 +8,6 @@ import jakarta.validation.Valid;
 import java.util.List;
 import java.util.OptionalInt;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,8 +19,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/employees")
 public class EmployeeController implements IEmployeeController<EmployeeResponseDto, EmployeeRequest> {
 
-    @Autowired
-    private EmployeeService employeeService;
+    private final EmployeeService employeeService;
+
+    public EmployeeController(EmployeeService employeeService) {
+        this.employeeService = employeeService;
+    }
 
     @Override
     public ResponseEntity<List<EmployeeResponseDto>> getAllEmployees() {

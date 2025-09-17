@@ -26,6 +26,8 @@ logging:
   level:
     root: INFO
     com.reliaquest: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
 employee:
   service:
     baseUrl: http://localhost:8112/api/v1/employee

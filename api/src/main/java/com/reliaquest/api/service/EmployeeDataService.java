@@ -17,7 +17,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -28,8 +27,11 @@ import org.springframework.stereotype.Service;
  */
 public class EmployeeDataService {
 
-    @Autowired
-    private EmployeeClient employeeClient;
+    private final EmployeeClient employeeClient;
+
+    public EmployeeDataService(EmployeeClient employeeClient) {
+        this.employeeClient = employeeClient;
+    }
 
     // Single cache instance storing Map<String (employeeId), EmployeeDto>
     private final Cache<String, Map<String, EmployeeResponseDto>> cache = Caffeine.newBuilder()
@@ -49,22 +51,24 @@ public class EmployeeDataService {
         log.info("Fetching employees from Employee Service");
         ApiResponse<List<EmployeeDto>> response = employeeClient.getAllEmployees();
         List<EmployeeDto> employees = response.getData();
-
         if (employees == null) {
             employees = new ArrayList<>();
         }
+        log.info("Fetched {} employees", employees.size());
         Map<String, EmployeeResponseDto> employeeMap = employees.stream()
                 .filter(e -> e.getId() != null)
                 .map(this::toResponse)
                 .collect(Collectors.toConcurrentMap(EmployeeResponseDto::getId, e -> e));
-
-        cache.put(AppConstants.CACHE_KEY_ALL, employeeMap); // populate the cache
+        log.info("updating cache with {} employees", employeeMap.size());
+        cache.put(AppConstants.CACHE_KEY_ALL, employeeMap);
+        log.debug("Cache updated"); // populate the cache
         return new ArrayList<>(employeeMap.values());
     }
 
     @Retry(name = "employeeService")
     @CircuitBreaker(name = "employeeService")
     public EmployeeResponseDto getEmployeeById(String id) {
+        log.info("Getting employee by ID: {}", id);
         Map<String, EmployeeResponseDto> employeeMap = cache.getIfPresent(AppConstants.CACHE_KEY_ALL);
 
         if (employeeMap != null && employeeMap.containsKey(id)) {
@@ -79,10 +83,13 @@ public class EmployeeDataService {
         if (employee != null) {
             employeeResponseDto = toResponse(employee);
             if (employeeMap == null) {
+                log.info("No entry in cache, creating new map");
                 employeeMap = new ConcurrentHashMap<>();
             }
+            log.info("Updating cache with employee ID: {}", id);
             employeeMap.put(id, employeeResponseDto);
             cache.put(AppConstants.CACHE_KEY_ALL, employeeMap);
+            log.debug("Entry for EmployeeId : {} added to cache", id);
         }
         return employeeResponseDto;
     }
@@ -90,7 +97,7 @@ public class EmployeeDataService {
     @Retry(name = "employeeService")
     @CircuitBreaker(name = "employeeService")
     public EmployeeResponseDto createEmployee(EmployeeRequest employeeInput) {
-        log.info("Creating employee");
+        log.info("Creating employee with name: {}", employeeInput.getName());
         ApiResponse<EmployeeDto> response = employeeClient.createEmployee(employeeInput);
         EmployeeDto createdEmployee = response.getData();
         EmployeeResponseDto employeeResponseDto = null;
@@ -98,10 +105,12 @@ public class EmployeeDataService {
             employeeResponseDto = toResponse(createdEmployee);
             Map<String, EmployeeResponseDto> employeeMap = cache.getIfPresent(AppConstants.CACHE_KEY_ALL);
             if (employeeMap == null) {
+                log.info("Cache empty, creating new map");
                 employeeMap = new ConcurrentHashMap<>();
             }
             employeeMap.put(createdEmployee.getId(), employeeResponseDto);
             cache.put(AppConstants.CACHE_KEY_ALL, employeeMap);
+            log.debug("Employee with ID: {} added to cache", createdEmployee.getId());
         }
 
         return employeeResponseDto;
@@ -116,9 +125,11 @@ public class EmployeeDataService {
         if (deleted) {
             Map<String, EmployeeResponseDto> employeeMap = cache.getIfPresent(AppConstants.CACHE_KEY_ALL);
             if (employeeMap != null) {
-                // Remove employees with matching name and update cache
+                log.info("Updating cache after deletion of employee with ID: {}", id);
+                // Remove employees with matching id and update cache
                 employeeMap.values().removeIf(emp -> id.equals(emp.getId()));
                 cache.put(AppConstants.CACHE_KEY_ALL, employeeMap);
+                log.debug("Employee with ID: {} removed from cache", id);
             }
         }
         return deleted;
